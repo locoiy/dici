@@ -6,17 +6,31 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.LinkedList;
+
+import jxl.Workbook;
+import jxl.read.biff.BiffException;
+import jxl.write.Label;
+import jxl.write.WritableSheet;
+import jxl.write.WritableWorkbook;
+import jxl.write.WriteException;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener,View.OnClickListener {
 
@@ -36,6 +50,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LinkedList<accObject> accList = new LinkedList<>();
     private LinkedList<magObject> magList = new LinkedList<>();
 
+    private File file;
+    private FileOutputStream os;
+    private Workbook wb;
+    private WritableWorkbook wwb;
+    private WritableSheet sheet;
+    private boolean bStart = false;
+    private int col = 0;
+    private int row = 0;
+
+    private static final String TAG = "MainActivity";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +76,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btn_stop.setOnClickListener(this);
         btn_clear = (Button)findViewById(R.id.button_clear);
         btn_clear.setOnClickListener(this);
+
+        File fileDir = new File(getExternalFilesDir(Environment.DIRECTORY_DCIM).getAbsolutePath());
+        boolean hasDir = fileDir.exists();
+        if (!hasDir) {
+            fileDir.mkdirs();// 这里创建的是目录
+        }
+
+        file = new File(fileDir, "test1.xls");
+        if ( !file.exists() ) {
+            try {
+                file.createNewFile();
+                Toast.makeText(getApplicationContext(), "文件创建成功", Toast.LENGTH_LONG).show();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            os = new FileOutputStream(file, true);
+            wwb = Workbook.createWorkbook(os);
+            wb = Workbook.getWorkbook(file);
+            count = wb.getNumberOfSheets();
+            txv_cnt.setText("第" + count + "组");
+            wb.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (BiffException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -206,6 +260,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // 启动动画
         image.startAnimation(ra);
         currentDegree = -degree;
+
+        if (bStart) {
+            try {
+                jxl.write.Number number = new jxl.write.Number(col, row, m_values[0]);
+                sheet.addCell(number);
+                number = new jxl.write.Number(col+1, row, m_values[1]);
+                sheet.addCell(number);
+                number = new jxl.write.Number(col+2, row, m_values[2]);
+                sheet.addCell(number);
+                number = new jxl.write.Number(col+3, row, values[0]);
+                sheet.addCell(number);
+                number = new jxl.write.Number(col+4, row, values[1]);
+                sheet.addCell(number);
+                number = new jxl.write.Number(col+5, row, values[2]);
+                sheet.addCell(number);
+                row = row + 1;
+                Log.d(TAG, "write row:" + row + ", m_values:" + m_values[0]);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Override
@@ -217,12 +292,51 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onClick(View view) {
         switch(view.getId()){
             case R.id.button_start:
-                count++;
-                txv_cnt.setText("第" + count + "组");
+                try {
+                    wb = Workbook.getWorkbook(file);
+                    wwb = Workbook.createWorkbook(file, wb);
+                    sheet = wwb.createSheet("第"+count+"组", count);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                bStart = true;
                 break;
             case R.id.button_stop:
+                bStart = false;
+                try {
+                    // 关闭文件
+                    wwb.write();
+                    wwb.close();
+                    //wb.close();
+                    os.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                count++;
+                txv_cnt.setText("第" + count + "组");
+                row = 0;
                 break;
             case R.id.button_clear:
+                try {
+                    wb = Workbook.getWorkbook(file);
+                    wwb = Workbook.createWorkbook(file, wb);
+                    Log.d(TAG, "total sheet:" + wwb.getNumberOfSheets());
+                    for (int i = 0; i < wwb.getNumberOfSheets(); i++) {
+                        wwb.removeSheet(i);
+                        Log.d(TAG, "remove sheet:" + i);
+                    }
+                    wwb.write();
+                    wwb.close();
+                    count = 0;
+                    txv_cnt.setText("第" + count + "组");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (BiffException e) {
+                    e.printStackTrace();
+                } catch (WriteException e) {
+                    e.printStackTrace();
+                }
+
                 break;
             default:
                 break;
