@@ -3,7 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://D:\Git\dici\app\app.iml" filepath="D:\Git\dici\app\app.iml" />
       <module fileurl="file://$PROJECT_DIR$/dici.iml" filepath="$PROJECT_DIR$/dici.iml" />
+      <module fileurl="file://D:\Git\dici\dici.iml" filepath="D:\Git\dici\dici.iml" />
     </modules>
   </component>
 </project>

@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             e.printStackTrace();
         }
 
-        this.flushFile();
+        //this.flushFile();
     }
 
     @Override
@@ -276,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         image.startAnimation(ra);
         currentDegree = -degree;
 
-        if (bStart && num < 200) {
+        if (bStart) {
             try {
                 Data d = new Data(m_values[0], m_values[1], m_values[2], values[0], values[1], values[2]);
                 data.add(d);
@@ -335,13 +335,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     sheet = wwb.createSheet("第"+count+"组", count);
                     Log.d(TAG, "total cell:" + sheet.getRows());
                     jxl.write.Number number;
-                    for(int i=0; i<50; i++)
+                    for(int i=0; i<data.size(); i++)
                     {
                         Data d = data.get(i);
                         Log.d(TAG, "i:" + i + "x:" + d.getX());
                         number = new jxl.write.Number(0, i, d.getX());
                         sheet.addCell(number);
-/*
                         number = new jxl.write.Number(1, i, d.getY());
                         sheet.addCell(number);
                         number = new jxl.write.Number(2, i, d.getZ());
@@ -351,13 +350,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         number = new jxl.write.Number(4, i, d.getB());
                         sheet.addCell(number);
                         number = new jxl.write.Number(5, i, d.getC());
-                        sheet.addCell(number);
-*/
-                    }
-                    for(int i=50; i<100; i++) {
-                        Data d = data.get(i);
-                        Log.d(TAG, "i:" + i + "x:" + d.getX());
-                        number = new jxl.write.Number(0, i, d.getX());
                         sheet.addCell(number);
                     }
                     // 关闭文件
