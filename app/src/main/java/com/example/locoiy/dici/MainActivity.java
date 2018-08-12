@@ -1,10 +1,12 @@
 package com.example.locoiy.dici;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
@@ -22,12 +24,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 import jxl.Workbook;
 import jxl.read.biff.BiffException;
-import jxl.write.Label;
 import jxl.write.WritableSheet;
 import jxl.write.WritableWorkbook;
 import jxl.write.WriteException;
@@ -51,13 +53,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private LinkedList<magObject> magList = new LinkedList<>();
 
     private File file;
-    private FileOutputStream os;
+    private FileOutputStream fos;
     private Workbook wb;
     private WritableWorkbook wwb;
     private WritableSheet sheet;
     private boolean bStart = false;
     private int col = 0;
     private int row = 0;
+    private int num = 0;
+    private ArrayList<Data> data = new ArrayList<Data>();
 
     private static final String TAG = "MainActivity";
 
@@ -87,24 +91,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if ( !file.exists() ) {
             try {
                 file.createNewFile();
+                FileOutputStream os = new FileOutputStream(file, true);
+                wwb = Workbook.createWorkbook(os);
+                wwb.createSheet("1", 0);
+                os.flush();
+                wwb.write();
+                wwb.close();
+                os.close();
                 Toast.makeText(getApplicationContext(), "文件创建成功", Toast.LENGTH_LONG).show();
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (WriteException e) {
                 e.printStackTrace();
             }
         }
 
         try {
-            os = new FileOutputStream(file, true);
-            wwb = Workbook.createWorkbook(os);
-            wb = Workbook.getWorkbook(file);
+            FileInputStream is = new FileInputStream(file);
+            Workbook wb = Workbook.getWorkbook(is);
             count = wb.getNumberOfSheets();
             txv_cnt.setText("第" + count + "组");
             wb.close();
+            is.close();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (BiffException e) {
             e.printStackTrace();
         }
+
+        this.flushFile();
     }
 
     @Override
@@ -261,21 +276,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         image.startAnimation(ra);
         currentDegree = -degree;
 
-        if (bStart) {
+        if (bStart && num < 200) {
             try {
-                jxl.write.Number number = new jxl.write.Number(col, row, m_values[0]);
-                sheet.addCell(number);
-                number = new jxl.write.Number(col+1, row, m_values[1]);
-                sheet.addCell(number);
-                number = new jxl.write.Number(col+2, row, m_values[2]);
-                sheet.addCell(number);
-                number = new jxl.write.Number(col+3, row, values[0]);
-                sheet.addCell(number);
-                number = new jxl.write.Number(col+4, row, values[1]);
-                sheet.addCell(number);
-                number = new jxl.write.Number(col+5, row, values[2]);
-                sheet.addCell(number);
+                Data d = new Data(m_values[0], m_values[1], m_values[2], values[0], values[1], values[2]);
+                data.add(d);
+                //jxl.write.Number number = new jxl.write.Number(col, row, m_values[0]);
+                //sheet.addCell(number);
+//                number = new jxl.write.Number(col+1, row, m_values[1]);
+//                sheet.addCell(number);
+//                number = new jxl.write.Number(col+2, row, m_values[2]);
+//                sheet.addCell(number);
+//                number = new jxl.write.Number(col+3, row, values[0]);
+//                sheet.addCell(number);
+//                number = new jxl.write.Number(col+4, row, values[1]);
+//                sheet.addCell(number);
+//                number = new jxl.write.Number(col+5, row, values[2]);
+//                sheet.addCell(number);
                 row = row + 1;
+                num = num + 1;
                 Log.d(TAG, "write row:" + row + ", m_values:" + m_values[0]);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -288,55 +306,91 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    private void flushFile() {
+        Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        intent.setData(Uri.fromFile(file));
+        this.sendBroadcast(intent);
+    }
+
+
     @Override
     public void onClick(View view) {
         switch(view.getId()){
             case R.id.button_start:
-                try {
-                    wb = Workbook.getWorkbook(file);
-                    wwb = Workbook.createWorkbook(file, wb);
-                    sheet = wwb.createSheet("第"+count+"组", count);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+//                try {
+//                    wb = Workbook.getWorkbook(file);
+//                    wwb = Workbook.createWorkbook(file, wb);
+//                    sheet = wwb.createSheet("第"+count+"组", count);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+                data.clear();
                 bStart = true;
                 break;
             case R.id.button_stop:
                 bStart = false;
                 try {
+                    wb = Workbook.getWorkbook(file);
+                    wwb = Workbook.createWorkbook(file, wb);
+                    sheet = wwb.createSheet("第"+count+"组", count);
+                    Log.d(TAG, "total cell:" + sheet.getRows());
+                    jxl.write.Number number;
+                    for(int i=0; i<50; i++)
+                    {
+                        Data d = data.get(i);
+                        Log.d(TAG, "i:" + i + "x:" + d.getX());
+                        number = new jxl.write.Number(0, i, d.getX());
+                        sheet.addCell(number);
+/*
+                        number = new jxl.write.Number(1, i, d.getY());
+                        sheet.addCell(number);
+                        number = new jxl.write.Number(2, i, d.getZ());
+                        sheet.addCell(number);
+                        number = new jxl.write.Number(3, i, d.getA());
+                        sheet.addCell(number);
+                        number = new jxl.write.Number(4, i, d.getB());
+                        sheet.addCell(number);
+                        number = new jxl.write.Number(5, i, d.getC());
+                        sheet.addCell(number);
+*/
+                    }
                     // 关闭文件
                     wwb.write();
                     wwb.close();
-                    //wb.close();
-                    os.close();
+                    wb.close();
+                    data.clear();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                //this.flushFile();
                 count++;
+                num = 0;
                 txv_cnt.setText("第" + count + "组");
                 row = 0;
                 break;
             case R.id.button_clear:
                 try {
-                    wb = Workbook.getWorkbook(file);
+                    Workbook wb = Workbook.getWorkbook(file);
+//                    Log.d(TAG, "total sheet:" + wb.getNumberOfSheets());
+//
+//                    FileOutputStream os = new FileOutputStream(file);
                     wwb = Workbook.createWorkbook(file, wb);
-                    Log.d(TAG, "total sheet:" + wwb.getNumberOfSheets());
-                    for (int i = 0; i < wwb.getNumberOfSheets(); i++) {
+                    for (int i = wwb.getNumberOfSheets()-1; i > 0; i--) {
                         wwb.removeSheet(i);
                         Log.d(TAG, "remove sheet:" + i);
                     }
                     wwb.write();
                     wwb.close();
-                    count = 0;
+                    //os.close();
+                    count = 1;
                     txv_cnt.setText("第" + count + "组");
                 } catch (IOException e) {
                     e.printStackTrace();
-                } catch (BiffException e) {
-                    e.printStackTrace();
                 } catch (WriteException e) {
                     e.printStackTrace();
+                } catch (BiffException e) {
+                    e.printStackTrace();
                 }
-
                 break;
             default:
                 break;
