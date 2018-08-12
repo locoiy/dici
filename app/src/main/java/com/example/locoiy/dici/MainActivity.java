@@ -354,6 +354,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         sheet.addCell(number);
 */
                     }
+                    for(int i=50; i<100; i++) {
+                        Data d = data.get(i);
+                        Log.d(TAG, "i:" + i + "x:" + d.getX());
+                        number = new jxl.write.Number(0, i, d.getX());
+                        sheet.addCell(number);
+                    }
                     // 关闭文件
                     wwb.write();
                     wwb.close();
