@@ -1,6 +1,9 @@
 package com.example.locoiy.dici;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -98,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 wwb.write();
                 wwb.close();
                 os.close();
+                new SingleMediaScanner(this, file);
                 Toast.makeText(getApplicationContext(), "文件创建成功", Toast.LENGTH_LONG).show();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -324,6 +328,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 //                } catch (Exception e) {
 //                    e.printStackTrace();
 //                }
+                btn_start.setEnabled(false);
+                btn_stop.setEnabled(true);
+                btn_clear.setEnabled(false);
                 data.clear();
                 bStart = true;
                 break;
@@ -357,38 +364,56 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     wwb.close();
                     wb.close();
                     data.clear();
+                    Toast.makeText(MainActivity.this, "已存入第"+ count+ "组", Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 //this.flushFile();
+                btn_start.setEnabled(true);
+                btn_stop.setEnabled(false);
+                btn_clear.setEnabled(true);
                 count++;
                 num = 0;
                 txv_cnt.setText("第" + count + "组");
                 row = 0;
                 break;
             case R.id.button_clear:
-                try {
-                    Workbook wb = Workbook.getWorkbook(file);
-//                    Log.d(TAG, "total sheet:" + wb.getNumberOfSheets());
-//
-//                    FileOutputStream os = new FileOutputStream(file);
-                    wwb = Workbook.createWorkbook(file, wb);
-                    for (int i = wwb.getNumberOfSheets()-1; i > 0; i--) {
-                        wwb.removeSheet(i);
-                        Log.d(TAG, "remove sheet:" + i);
-                    }
-                    wwb.write();
-                    wwb.close();
-                    //os.close();
-                    count = 1;
-                    txv_cnt.setText("第" + count + "组");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (WriteException e) {
-                    e.printStackTrace();
-                } catch (BiffException e) {
-                    e.printStackTrace();
-                }
+                AlertDialog dialog = new AlertDialog.Builder(this)
+                        .setTitle("警告")
+                        .setMessage("是否确定删除已保存数据？")
+                        .setNegativeButton("取消", new OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        })
+                        .setPositiveButton("确定", new OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                try {
+                                    Workbook wb = Workbook.getWorkbook(file);
+                                    wwb = Workbook.createWorkbook(file, wb);
+                                    for (int i = wwb.getNumberOfSheets()-1; i > 0; i--) {
+                                        wwb.removeSheet(i);
+                                        Log.d(TAG, "remove sheet:" + i);
+                                    }
+                                    wwb.write();
+                                    wwb.close();
+                                    //os.close();
+                                    count = 1;
+                                    txv_cnt.setText("第" + count + "组");
+                                    Toast.makeText(MainActivity.this, "删除成功", Toast.LENGTH_SHORT).show();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } catch (WriteException e) {
+                                    e.printStackTrace();
+                                } catch (BiffException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).create();
+                dialog.show();
+
                 break;
             default:
                 break;
